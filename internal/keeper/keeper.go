@@ -164,15 +164,22 @@ func (k *Keeper) mount(ctx context.Context, d set.Definition, fresh bool) error 
 	}
 
 	meta, recs, err := k.state.Load(ctx, d.Name)
-	if err != nil {
+
+	badMeta := errors.Is(err, state.ErrBadMeta)
+	if err != nil && !badMeta {
 		return fmt.Errorf("load %s: %w", d.Name, err)
 	}
 
-	keep := meta != nil && meta.ID == d.ID && meta.Type == d.Type
+	if badMeta {
+		k.log.Warn("set meta is unreadable, opening a new epoch", "set", d.Name, "error", err.Error())
+	}
+
+	keep := badMeta || (meta != nil && meta.ID == d.ID && meta.Type == d.Type)
+	resume := keep && !fresh && !badMeta
 	s := set.New(d, seq0())
 
 	switch {
-	case keep && !fresh:
+	case resume:
 		s.Resume(meta.Epoch, meta.Key, meta.Seq, recs)
 
 		if _, _, hash, _ := s.State(); hash != meta.Hash {
@@ -238,7 +245,7 @@ func (k *Keeper) mount(ctx context.Context, d set.Definition, fresh bool) error 
 	go k.planner(h)
 	go k.committer(h)
 
-	k.log.Info("set mounted", "set", d.Name, "entries", s.Len(), "resumed", keep && !fresh,
+	k.log.Info("set mounted", "set", d.Name, "entries", s.Len(), "resumed", resume,
 		"epoch", wire.Hex(epoch), "seq", seq, "hash", wire.Hex(hash))
 
 	k.publishTick(h)

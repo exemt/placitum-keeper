@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -14,6 +15,10 @@ import (
 )
 
 const whySep = "\x1f"
+
+// ErrBadMeta means the meta of a set did not parse. Load returns its records
+// all the same: they are stored apart from the meta.
+var ErrBadMeta = errors.New("unreadable meta")
 
 type Meta struct {
 	ID    string
@@ -77,9 +82,15 @@ func (r *Redis) Load(ctx context.Context, name string) (*Meta, []set.Record, err
 		return nil, nil, nil
 	}
 
-	m, err := parseMeta(fields)
-	if err != nil {
-		return nil, nil, fmt.Errorf("meta of %s: %w", name, err)
+	var (
+		meta    *Meta
+		badMeta error
+	)
+
+	if m, err := parseMeta(fields); err != nil {
+		badMeta = fmt.Errorf("%w of %s: %w", ErrBadMeta, name, err)
+	} else {
+		meta = &m
 	}
 
 	zs, err := r.client.ZRangeWithScores(ctx, SetKey(name), 0, -1).Result()
@@ -105,7 +116,7 @@ func (r *Redis) Load(ctx context.Context, name string) (*Meta, []set.Record, err
 		recs = append(recs, rec)
 	}
 
-	return &m, recs, nil
+	return meta, recs, badMeta
 }
 
 func (r *Redis) Reset(ctx context.Context, name string, m Meta, keep bool) error {
