@@ -5,7 +5,7 @@ English · [Русский](README.ru.md)
 Source of truth for Placitum active datasets: bans, address lists and rate limit keys, everything
 that changes at runtime and must be the same on every node.
 
-An inspector asks to add an address to a dataset, and the request comes here. Keeper applies it in
+An inspector signals to add an address to a dataset, and the request comes here. Keeper applies it in
 memory, stores the record, publishes a delta and answers. Mirrors in inspectors and on nodes pick
 up the delta and keep their own copy.
 

@@ -23,7 +23,7 @@ replicas.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `WAF_NATS_URL` | `NATS_URL`, then `nats://nats:4222` | bus |
-| `WAF_KEEPER_REDIS_URL` | `REDIS_INTERNAL_URL` | internal Redis for state and packages; required, state does not belong in the exchange |
+| `WAF_KEEPER_REDIS_URL` | `REDIS_INTERNAL_URL` | internal Redis for state and packages; required, state does not belong in the buffer |
 | `WAF_KEEPER_DATABASE_URL` | `postgres://waf:waf@postgres:5432/waf` | controller database; set it explicitly |
 | `WAF_KEEPER_HTTP` | `:8094` | `/healthz` and dataset state |
 | `WAF_KEEPER_NAME` | `keeper` | name in the presence frame |
@@ -75,7 +75,7 @@ sequence number; if it does not, look at the queue and the limits.
 - **Credentials in the default.** `postgres://waf:waf@postgres:5432/waf` matches the bundled
   installation. Set `WAF_KEEPER_DATABASE_URL` explicitly, otherwise the process may quietly connect
   to the wrong database.
-- **State goes to the internal Redis, not the exchange.** Mixed-up addresses give a dataset that
+- **State goes to the internal Redis, not the buffer.** Mixed-up addresses give a dataset that
   exists but looks empty: packages are written to one instance and read from another.
 - **Overload shows up as an answer.** When the queue is full keeper rejects instead of piling up;
   the sender must log that, not treat the record as written.
