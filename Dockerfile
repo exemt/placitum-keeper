@@ -25,7 +25,7 @@ ARG REVISION=unknown
 LABEL org.opencontainers.image.title="placitum/keeper" \
       org.opencontainers.image.description="Placitum keeper: source of truth for active datasets (bans, lists, limits)" \
       org.opencontainers.image.source="https://github.com/exemt/placitum-keeper" \
-      org.opencontainers.image.licenses="LicenseRef-Placitum" \
+      org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}"
 
