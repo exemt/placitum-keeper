@@ -15,9 +15,8 @@ inspector ──► waf.sets.<set>.event ──► keeper ──► record in Po
                                           └──────► delta to every mirror
 ```
 
-Why a separate process and not the controller: dataset contents change by thousands of records per
-second, a different rhythm from configuration. The controller is just another client here, like an
-inspector.
+Dataset contents change by thousands of records per second, a different rhythm from configuration,
+so they live in a process of their own. The controller is one more client here, like an inspector.
 
 ## Build and run
 
@@ -48,18 +47,17 @@ A write is accepted in full or rejected in full. Rejections: `unknown_set`, `ful
 HTTP on `:8094`: `GET /healthz` (`503` while datasets are loading), `GET /sets` with dataset stats,
 `GET /sets/<name>` with a snapshot reference.
 
-## Good to know
+## Storage and scale
 
-- **Storage is the controller database.** Keeper has none of its own: records, sizes and search
-  come from there, contents live in memory and in internal Redis packages.
-- **An answer is mandatory.** The sender waits for it: a rejection (`full`, `store_unavailable`) is
-  a line in the inspector log, not silence.
-- **One process per installation.** Keeper is the sequencer: it defines the order of records, and a
-  second copy would mean two truths. It scales with an internal pipeline, not with replicas.
+Records live in the controller database; keeper reads sizes and search results from there and keeps
+the contents in memory and in internal Redis packages. Every write gets an answer, and the sender
+waits for it, so a rejection such as `full` or `store_unavailable` ends up in the inspector log. One
+keeper runs per installation, because it sets the order of records; throughput comes from the
+pipeline inside the process.
 
 ## License
 
 [Apache License 2.0](LICENSE); the attribution notice is in [NOTICE](NOTICE). This repository is
 part of the Placitum open core. The inspectors are licensed separately: each inspector repository
-carries the Placitum License Agreement. Releases made before this change came under the Placitum
+carries the Placitum License Agreement. Versions up to 1.0.1 were released under the Placitum
 License Agreement 1.1.
