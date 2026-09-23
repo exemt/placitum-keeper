@@ -14,6 +14,7 @@ type Config struct {
 	RedisURL    string
 	SnapshotTTL time.Duration
 	DiffTTL     time.Duration
+	InlineMax   int
 	Coalesce    time.Duration
 	BatchMax    int
 	QueueMax    int
@@ -61,6 +62,21 @@ func envInt(name string, def int) (int, error) {
 	return n, nil
 }
 
+// envBytes reads a byte count that may be zero: zero switches a feature off.
+func envBytes(name string, def int) (int, error) {
+	raw := os.Getenv(name)
+	if raw == "" {
+		return def, nil
+	}
+
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 0 {
+		return 0, fmt.Errorf("%s: expected a byte count, got %q", name, raw)
+	}
+
+	return n, nil
+}
+
 func Load() (Config, error) {
 	c := Config{
 		Name:        env("WAF_KEEPER_NAME", "keeper"),
@@ -90,6 +106,10 @@ func Load() (Config, error) {
 	}
 
 	if c.DiffTTL, err = envDuration("WAF_KEEPER_DIFF_TTL", 90*time.Second); err != nil {
+		return c, err
+	}
+
+	if c.InlineMax, err = envBytes("WAF_KEEPER_INLINE_MAX", 1024); err != nil {
 		return c, err
 	}
 

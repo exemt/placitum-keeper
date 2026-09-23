@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -26,6 +27,10 @@ type Options struct {
 	Pipeline    int
 	DiffTTL     time.Duration
 	SnapshotTTL time.Duration
+	// InlineMax is the largest package, in bytes, that travels inside the
+	// diff frame as well as through Redis; zero sends every package by
+	// reference only.
+	InlineMax int
 }
 
 type Bus interface {
@@ -51,6 +56,7 @@ type Stats struct {
 	Writes     atomic.Int64
 	Rejects    atomic.Int64
 	Diffs      atomic.Int64
+	Inline     atomic.Int64
 	Expired    atomic.Int64
 	Snapshots  atomic.Int64
 	Packs      atomic.Int64
@@ -741,7 +747,7 @@ func (k *Keeper) commit(h *holder, b *batch) {
 
 	h.stats.Diffs.Add(1)
 
-	k.bus.Publish(name, wire.Encode(wire.Frame{
+	f := wire.Frame{
 		V:       wire.V3,
 		Set:     name,
 		Epoch:   wire.Hex(epoch),
@@ -750,7 +756,19 @@ func (k *Keeper) commit(h *holder, b *batch) {
 		Hash:    wire.Hex(ch.Hash),
 		Package: b.pkgKey,
 		Count:   len(ch.Deltas),
-	}))
+	}
+
+	/*
+	 * A small package rides in the frame itself: a mirror that is exactly one
+	 * step behind applies it without a round trip to Redis. The copy in Redis
+	 * stays for mirrors that are further behind or come from a snapshot.
+	 */
+	if k.opts.InlineMax > 0 && len(b.pkg) <= k.opts.InlineMax {
+		f.Inline = base64.StdEncoding.EncodeToString(b.pkg)
+		h.stats.Inline.Add(1)
+	}
+
+	k.bus.Publish(name, wire.Encode(f))
 
 	for i, j := range b.jobs {
 		b.results[i].seq = ch.Seq
@@ -930,6 +948,7 @@ type SetStat struct {
 	Writes     int64  `json:"writes"`
 	Rejects    int64  `json:"rejects"`
 	Diffs      int64  `json:"diffs"`
+	Inline     int64  `json:"inline"`
 	Expired    int64  `json:"expired"`
 	Snapshots  int64  `json:"snapshots"`
 	Packs      int64  `json:"packs"`
@@ -958,6 +977,7 @@ func (k *Keeper) Stats() []SetStat {
 			Writes:     h.stats.Writes.Load(),
 			Rejects:    h.stats.Rejects.Load(),
 			Diffs:      h.stats.Diffs.Load(),
+			Inline:     h.stats.Inline.Load(),
 			Expired:    h.stats.Expired.Load(),
 			Snapshots:  h.stats.Snapshots.Load(),
 			Packs:      h.stats.Packs.Load(),

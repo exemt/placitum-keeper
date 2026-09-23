@@ -30,15 +30,17 @@ docker build -t placitum/keeper .
 
 | Subject | Вид | Что |
 | --- | --- | --- |
-| `waf.sets.<набор>` | publish | `diff` со ссылкой на пакет изменений в Redis и `tick` раз в 2 с |
+| `waf.sets.<набор>` | publish | `diff` со ссылкой на пакет изменений в Redis (малый пакет — и в самом кадре) и `tick` раз в 2 с |
 | `waf.sets.<набор>.snapshot` | request | зеркало запрашивает ссылку на снапшот |
 | `waf.sets.<набор>.event` | request или publish | писатель добавляет или снимает значения; в ответе `seq` или ошибка |
 | `waf.keeper.define` | request | контроллер требует перечитать определение набора |
 | `waf.keeper.reload` | request | сверить все определения |
 | `waf.keeper.lookup` | request | `{set, value}` → `{found, exp}`, не для пути запроса |
 
-Состав передаётся через внутренний Redis, а не по шине: пакеты изменений лежат под
-`waf:diff:<набор>:<seq>`, снапшоты — под `waf:snap:<набор>:<epoch>:<seq>`.
+Состав передаётся через внутренний Redis: пакеты изменений лежат под `waf:diff:<набор>:<seq>`,
+снапшоты — под `waf:snap:<набор>:<epoch>:<seq>`. Пакет не больше 1 КБ (`WAF_KEEPER_INLINE_MAX`)
+едет и в самом кадре `diff` в base64 (`inline`): зеркало ровно на шаг позади применяет его без
+обращения к Redis, по ключам пакеты читает только отставшее сильнее.
 
 Запись принимается целиком или целиком отклоняется. Ошибки: `unknown_set`, `full`, `wrong_type`,
 `too_long`, `no_origin`, `no_ttl`, `forever`, `bad_op`, `store_unavailable`, `not_ready`,

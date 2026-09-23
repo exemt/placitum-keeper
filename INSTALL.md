@@ -37,6 +37,7 @@ replicas.
 | `WAF_KEEPER_PULSE` | `5s` | presence frame interval |
 | `WAF_KEEPER_SNAPSHOT_TTL` | `30s` | snapshot lifetime in Redis |
 | `WAF_KEEPER_DIFF_TTL` | `90s` | package lifetime in Redis; at least twice the snapshot lifetime |
+| `WAF_KEEPER_INLINE_MAX` | `1024` | largest package, in bytes, that also rides inside the `diff` frame; `0` sends references only |
 
 The defaults are sized for up to about ten thousand records per second.
 

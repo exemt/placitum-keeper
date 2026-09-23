@@ -43,6 +43,7 @@ type Frame struct {
 	Hash    string `json:"hash,omitempty"`
 	Key     string `json:"key,omitempty"`
 	Package string `json:"package,omitempty"`
+	Inline  string `json:"inline,omitempty"`
 	Object  string `json:"object,omitempty"`
 	Count   int    `json:"count,omitempty"`
 	Bytes   int    `json:"bytes,omitempty"`

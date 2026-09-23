@@ -30,15 +30,18 @@ What it needs, settings and limits are in [INSTALL.md](INSTALL.md).
 
 | Subject | Kind | What |
 | --- | --- | --- |
-| `waf.sets.<set>` | publish | `diff` with a reference to a change package in Redis, and a `tick` every 2 s |
+| `waf.sets.<set>` | publish | `diff` with a reference to a change package in Redis, a small package inside the frame too, and a `tick` every 2 s |
 | `waf.sets.<set>.snapshot` | request | a mirror asks for a snapshot reference |
 | `waf.sets.<set>.event` | request or publish | a writer adds or removes values; the answer has `seq` or a rejection |
 | `waf.keeper.define` | request | the controller asks to reread a dataset definition |
 | `waf.keeper.reload` | request | reconcile every definition |
 | `waf.keeper.lookup` | request | `{set, value}` → `{found, exp}`, not for the hot path |
 
-Contents travel through the internal Redis, not the bus: change packages live under
-`waf:diff:<set>:<seq>` and snapshots under `waf:snap:<set>:<epoch>:<seq>`.
+Contents travel through the internal Redis: change packages live under `waf:diff:<set>:<seq>`
+and snapshots under `waf:snap:<set>:<epoch>:<seq>`. A package of up to 1 KB
+(`WAF_KEEPER_INLINE_MAX`) also rides inside the `diff` frame as base64 (`inline`): a mirror one
+step behind applies it without a round trip to Redis, and only a mirror further behind reads
+packages by key.
 
 A write is accepted in full or rejected in full. Rejections: `unknown_set`, `full`, `wrong_type`,
 `too_long`, `no_origin`, `no_ttl`, `forever`, `bad_op`, `store_unavailable`, `not_ready`,

@@ -85,6 +85,7 @@ func main() {
 		Pipeline:    cfg.Pipeline,
 		DiffTTL:     cfg.DiffTTL,
 		SnapshotTTL: cfg.SnapshotTTL,
+		InlineMax:   cfg.InlineMax,
 	})
 
 	srv := &http.Server{Addr: cfg.HTTP, Handler: httpapi.Handler(k), ReadHeaderTimeout: 5 * time.Second}
